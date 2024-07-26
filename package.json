@@ -9,7 +9,7 @@
   "scripts": {
     "dev:debug": "nodemon --exec \"tsc && node ./build | pino-pretty\" -i js --ext ts ",
     "dev:info": "nodemon  --exec \"tsc && node ./build | pino-pretty -L info\" --ext ts",
-    "app": "node ./build | pino-pretty -L info --ext ts"
+    "app": "node ./build | pino-pretty -L info"
   },
   "dependencies": {
     "@types/pino": "^7.0.5",
