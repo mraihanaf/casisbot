@@ -1,0 +1,20 @@
+{
+  "name": "casisbot",
+  "version": "1.0.0",
+  "description": "Whatsapp bot for SMKN 1 Jakarta casis group chat",
+  "main": "index.js",
+  "repository": "https://github.com/mraihanaf/casisbot",
+  "author": "mraihanaf",
+  "license": "MIT",
+  "scripts": {
+    "dev:debug": "nodemon --exec \"tsc && node ./build | pino-pretty\" -i js --ext ts ",
+    "dev:info": "nodemon  --exec \"tsc && node ./build | pino-pretty -L info\" --ext ts",
+    "app": "node ./build | pino-pretty -L info --ext ts"
+  },
+  "dependencies": {
+    "@types/pino": "^7.0.5",
+    "@whiskeysockets/baileys": "^6.7.5",
+    "pino": "^9.3.2",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
