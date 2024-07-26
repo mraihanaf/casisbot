@@ -36,5 +36,5 @@ async function connectToWhatsapp() {
 }
 
 connectToWhatsapp().catch(err => {
-    console.error(err)
+    logger.fatal(err)
 })
