@@ -2,3 +2,4 @@ node_modules
 yarn.lock
 auth_info
 .env
+schedules_data.json
