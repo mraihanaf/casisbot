@@ -7,14 +7,16 @@ import { WAMessageInfo } from "./WAMessageInfo"
 import { writeFileSync, readFileSync, existsSync } from "fs"
 import { Schedules } from "./schedules"
 import { validate as validateCron } from "node-cron"
-import { v7 } from 'uuid'
+import { v7, validate as validateUUID } from 'uuid'
+import { schedule } from 'node-cron'
 config()
+const owner_ids:string[]|undefined = process.env.OWNER_IDS?.split(" ")
 
 const logger = pino({
     name: "casisbot",
     level: "debug"
 })
-
+logger.info(owner_ids)
 const schedules = new Schedules()
 
 async function connectToWhatsapp() {
@@ -44,6 +46,7 @@ async function connectToWhatsapp() {
     })
 
     schedules.on('open', async (group_id) => {
+        logger.info(`opening ${group_id}`)
         try {
             await sock.groupSettingUpdate(group_id, 'not_announcement')
         } catch (err) {
@@ -53,13 +56,14 @@ async function connectToWhatsapp() {
     })
 
     schedules.on('close', async (group_id) => {
+        logger.info(`closing ${group_id}`)
         try {
             await sock.groupSettingUpdate(group_id, 'announcement')
         } catch (err) {
             logger.error(err)
             await sock.sendMessage(group_id, { text: "I cant close the group."})
         }
-})
+    })
 
     sock.ev.on("messages.upsert", async Messages => {
         const { messages } = Messages
@@ -70,7 +74,8 @@ async function connectToWhatsapp() {
     
         if(type === 'protocolMessage' && msg.message?.[type]?.type === 0) return logger.info("protocol")
         const data = new WAMessageInfo(type,msg)
-        // logger.info(`[${data.isGroup ? "group" : "private"}][${data.id}](${data.sender}) ${data.msg}`)
+        if(!owner_ids?.includes(data.sender)) return
+        logger.info(`[${data.isGroup ? "group" : "private"}][${data.id}](${data.sender}) ${data.msg}`)
         if(data.msg.startsWith(process.env.PREFIX!)){
             const command = data.msg.split(" ")[0].replace(process.env.PREFIX!,"")
             switch(command){
@@ -87,11 +92,20 @@ async function connectToWhatsapp() {
                         group_id: data.id,
                         cron_expression: cron_sytax
                     })
-                    await writeFileSync("schedules_data.json",JSON.stringify(schedules.fileData))
-                    await sock.sendMessage(data.id, {text: `Success, UUID: \`${uuid}\``})
+                    await sock.sendMessage(data.id, {text: `Success, UUID: \`${uuid}\``}, { quoted: data.message })
                     break
                 case 'remove':
-                    
+                    logger.info(data.args)
+                    if(!data.isGroup) return await sock.sendMessage(data.id, {text: "This is group-only command."}, { quoted: data.message })
+                    if(data.args.length !== 1) return await sock.sendMessage(data.id, { text: `Invalid argument.`}, {quoted: data.message})
+                    const arg_uuid = data.args[0]
+                    if(!validateUUID(arg_uuid)) return await sock.sendMessage(data.id, { text: "Invalid UUID."}, {quoted: data.message})
+                    try {
+                        await schedules.remove(arg_uuid)
+                    } catch (err: unknown){
+                        if(err instanceof Error) return await sock.sendMessage(data.id, { text: "UUID Not Found."}, {quoted: data.message})
+                    }
+                    await sock.sendMessage(data.id, { text: "Success."}, {quoted: data.message})
                     break
             }
         }
@@ -106,8 +120,6 @@ for(const uuid in fileData){
     schedules.add(uuid, fileData[uuid])
 }
 logger.info("shedules loaded.")
-
-
 
 connectToWhatsapp().catch(err => {
     logger.fatal(err)

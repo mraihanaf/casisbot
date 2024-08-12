@@ -13,7 +13,7 @@ export namespace FileData {
 }
 
 export interface ISchedules {
-    [key:string]: ScheduledTask;
+    [key:string]: ScheduledTask
 }
 
 export interface IWAMessageInfo {
