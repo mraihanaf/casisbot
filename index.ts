@@ -8,7 +8,8 @@ import { writeFileSync, readFileSync, existsSync } from "fs"
 import { Schedules } from "./schedules"
 import { validate as validateCron } from "node-cron"
 import { v7, validate as validateUUID } from 'uuid'
-import { schedule } from 'node-cron'
+import cronstrue from "cronstrue"
+
 config()
 const owner_ids:string[]|undefined = process.env.OWNER_IDS?.split(" ")
 
@@ -80,10 +81,10 @@ async function connectToWhatsapp() {
             const command = data.msg.split(" ")[0].replace(process.env.PREFIX!,"")
             switch(command){
                 case 'add':
-                    if(!data.isGroup) return await sock.sendMessage(data.id, {text: "This is group-only command."}, { quoted: data.message })
+                    if(!data.isGroup) return await sock.sendMessage(data.id, {text: "This is group-only command."}, { quoted: msg })
                     const action:string = data.args.splice(0,1)[0]
-                    if(data.args.length < 5 || data.args.length > 6) return await sock.sendMessage(data.id, {text: "Invalid Argument."}, {quoted:data.message})
-                    if(action !== "open" && action !== "close") return await sock.sendMessage(data.id, {text: "Invalid Action."}, {quoted: data.message})
+                    if(data.args.length < 5 || data.args.length > 6) return await sock.sendMessage(data.id, {text: "Invalid Argument."}, {quoted:msg})
+                    if(action !== "open" && action !== "close") return await sock.sendMessage(data.id, {text: "Invalid Action."}, {quoted: msg})
                     const cron_sytax: string = data.args.join(" ").trim()
                     if(!validateCron(cron_sytax)) return await sock.sendMessage(data.id, {text: "Invalid Cron Syntax."})
                     const uuid = v7().toString()
@@ -92,20 +93,23 @@ async function connectToWhatsapp() {
                         group_id: data.id,
                         cron_expression: cron_sytax
                     })
-                    await sock.sendMessage(data.id, {text: `Success, UUID: \`${uuid}\``}, { quoted: data.message })
+                    await sock.sendMessage(data.id, {text: `Success, ${cronstrue.toString(cron_sytax)} Group will be ${action}\n UUID: \`${uuid}\``}, { quoted: msg })
                     break
                 case 'remove':
                     logger.info(data.args)
-                    if(!data.isGroup) return await sock.sendMessage(data.id, {text: "This is group-only command."}, { quoted: data.message })
-                    if(data.args.length !== 1) return await sock.sendMessage(data.id, { text: `Invalid argument.`}, {quoted: data.message})
+                    if(!data.isGroup) return await sock.sendMessage(data.id, {text: "This is group-only command."}, { quoted: msg })
+                    if(data.args.length !== 1) return await sock.sendMessage(data.id, { text: `Invalid argument.`}, {quoted: msg})
                     const arg_uuid = data.args[0]
-                    if(!validateUUID(arg_uuid)) return await sock.sendMessage(data.id, { text: "Invalid UUID."}, {quoted: data.message})
+                    if(!validateUUID(arg_uuid)) return await sock.sendMessage(data.id, { text: "Invalid UUID."}, {quoted: msg})
                     try {
                         await schedules.remove(arg_uuid)
                     } catch (err: unknown){
-                        if(err instanceof Error) return await sock.sendMessage(data.id, { text: "UUID Not Found."}, {quoted: data.message})
+                        if(err instanceof Error) return await sock.sendMessage(data.id, { text: "UUID Not Found."}, {quoted: msg})
                     }
-                    await sock.sendMessage(data.id, { text: "Success."}, {quoted: data.message})
+                    await sock.sendMessage(data.id, { text: "Success."}, {quoted: msg})
+                    break
+                case 'date':
+                    await sock.sendMessage(data.id, { text: Date().toString() }, { quoted: msg })
                     break
             }
         }
